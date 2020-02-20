@@ -12,6 +12,7 @@
 """
 
 import os
+import json
 
 from graphviz import Digraph
 
@@ -910,3 +911,83 @@ class Graph:
                 origin_style=origin_style,
                 annotate_links=annotate_links
             )
+
+    def create_json(self, filename):
+        """method to create json file map"""
+
+        nodemap = {}
+        indx_count = 0
+        nodes_data = []
+        for node_pk in self._nodes:
+
+            nodemap[node_pk] = indx_count
+            indx_count = indx_count + 1
+
+            data_query = orm.QueryBuilder().append(
+                orm.Node,
+                filters={'id': {
+                    'in': [node_pk]
+                }},
+                project=['uuid', 'node_type', 'label'],
+            )
+            node_data = data_query.all()[0]
+            node_uuid = node_data[0]
+            node_type = node_data[1]
+            node_label = node_data[2]
+
+            if node_label == '':
+                node_label = 'node ' + str(indx_count)
+
+            nodes_data.append({
+                'calculation': json_node_style(node_type)['calculation'],
+                'attributes': {
+                    'uuid': node_uuid
+                },
+                'group': json_node_style(node_type)['group'],
+                'name': node_label,
+                'id': indx_count
+            })
+
+        links_data = []
+        for link_3d in self._edges:
+            source_pk = link_3d[0]
+            target_pk = link_3d[1]
+            source_indx = nodemap[source_pk]
+            target_indx = nodemap[target_pk]
+            links_data.append({'source': source_indx, 'target': target_indx})
+
+        graph_dict = {'nodes': nodes_data, 'links': links_data}
+        with open(filename, 'w') as handle:
+            json.dump(graph_dict, handle, indent=2, separators=(',', ': '))
+
+
+def json_node_style(node_type):
+    """map a node type to a json node style
+
+    :param node_type: the node_type to map
+    :type node_type: string
+    :rtype: dict
+    """
+
+    node_types = node_type.split('.')
+    set_calculation = False
+    set_group = 1
+
+    if node_types[0] == 'process':
+        set_calculation = True
+
+        if node_types[1] == 'calculation':
+            set_group = 2
+
+        if node_types[1] == 'workflow':
+            set_group = 3
+
+    if node_types[0] == 'data':
+
+        if node_types[1] == 'code':
+            set_group = 4
+
+        else:
+            set_group = 5
+
+    return {'calculation': set_calculation, 'group': set_group}

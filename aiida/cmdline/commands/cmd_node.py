@@ -425,10 +425,11 @@ def verdi_graph():
 )
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
+@click.option('-json', '--json-output', is_flag=True, help='writes json instead.')
 @decorators.with_dbenv()
 def graph_generate(
     root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-    output_format, show
+    output_format, show, json_output
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -458,9 +459,14 @@ def graph_generate(
         include_process_inputs=process_in,
         print_func=print_func
     )
-    output_file_name = graph.graphviz.render(
-        filename='{}.{}'.format(root_node.pk, engine), format=output_format, view=show, cleanup=True
-    )
+
+    if json_output:
+        output_file_name = '{}.json'.format(root_node.pk)
+        graph.create_json(output_file_name)
+    else:
+        output_file_name = graph.graphviz.render(
+            filename='{}.{}'.format(root_node.pk, engine), format=output_format, view=show, cleanup=True
+        )
 
     echo.echo_success('Output file: {}'.format(output_file_name))
 

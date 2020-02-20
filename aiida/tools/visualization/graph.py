@@ -296,8 +296,6 @@ def _add_graphviz_node(
             )
         ]
 
-    print(label)
-
     if include_sublabels:
         sublabel = node_sublabel_func(node)
         if sublabel:
@@ -937,7 +935,7 @@ class Graph:
 
             nodes_data.append({
                 'id': indx_count,
-                'name': json_node_naming(node_data[3], indx_count),
+                'name': json_node_naming(node_pk),
                 'category': json_node_category(node_data[1]),
                 'attributes': {
                     'pk': node_pk,
@@ -970,16 +968,28 @@ class Graph:
             json.dump(graph_dict, handle, indent=2, separators=(',', ': '))
 
 
-def json_node_naming(node_label, indx_count):
+def json_node_naming(node_pk):
     """map a node type to a json node style
 
     :param node_type: the node_type to map
     :type node_type: string
     :rtype: dict
     """
+    node_instance = orm.load_node(node_pk)
 
-    if node_label == 'noexiste':
-        indx_count = indx_count + 1
+    if isinstance(node_instance, orm.Data):
+        label = ['{} ({})'.format(
+            node_instance.__class__.__name__,
+            get_node_id_label(node_instance, 'pk'),
+        )]
+
+    elif isinstance(node_instance, orm.ProcessNode):
+        main_name = node_instance.process_label
+        if node_instance.process_label is None:
+            main_name = node_instance.__class__.__name__
+        label = ['{} ({})'.format(main_name, get_node_id_label(node_instance, 'pk'))]
+
+    print(label)
 
     return 'Node'
 

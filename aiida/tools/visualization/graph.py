@@ -296,6 +296,8 @@ def _add_graphviz_node(
             )
         ]
 
+    print(id_type)
+
     if include_sublabels:
         sublabel = node_sublabel_func(node)
         if sublabel:
@@ -944,8 +946,8 @@ class Graph:
                     'process_type': node_data[2],
                     'label': node_data[3],
                     'description': node_data[4],
-                    'ctime': node_data[5],
-                    'mtime': node_data[6],
+                    'ctime': node_data[5].isoformat(),
+                    'mtime': node_data[6].isoformat(),
                 },
             })
 

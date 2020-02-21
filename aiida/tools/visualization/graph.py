@@ -989,7 +989,7 @@ def json_node_naming(node_pk):
             main_name = node_instance.__class__.__name__
         label = ['{} ({})'.format(main_name, get_node_id_label(node_instance, 'uuid'))]
 
-    return 'Node'
+    return label
 
 
 def json_node_category(node_type):

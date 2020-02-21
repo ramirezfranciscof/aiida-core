@@ -296,8 +296,6 @@ def _add_graphviz_node(
             )
         ]
 
-    print(id_type)
-
     if include_sublabels:
         sublabel = node_sublabel_func(node)
         if sublabel:
@@ -961,7 +959,7 @@ class Graph:
             links_data.append({
                 'source': source_indx,
                 'target': target_indx,
-                'type': link_3d[2],
+                'type': str(link_3d[2].link_type),
                 'label': link_label,
             })
 
@@ -982,16 +980,14 @@ def json_node_naming(node_pk):
     if isinstance(node_instance, orm.Data):
         label = ['{} ({})'.format(
             node_instance.__class__.__name__,
-            get_node_id_label(node_instance, 'pk'),
+            get_node_id_label(node_instance, 'uuid'),
         )]
 
     elif isinstance(node_instance, orm.ProcessNode):
         main_name = node_instance.process_label
         if node_instance.process_label is None:
             main_name = node_instance.__class__.__name__
-        label = ['{} ({})'.format(main_name, get_node_id_label(node_instance, 'pk'))]
-
-    print(label)
+        label = ['{} ({})'.format(main_name, get_node_id_label(node_instance, 'uuid'))]
 
     return 'Node'
 

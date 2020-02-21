@@ -960,7 +960,7 @@ class Graph:
                 'source': source_indx,
                 'target': target_indx,
                 'type': str(link_3d[2].link_type),
-                'label': link_label,
+                'label': link_label,  # THIS IS MISSING
             })
 
         graph_dict = {'nodes': nodes_data, 'links': links_data}

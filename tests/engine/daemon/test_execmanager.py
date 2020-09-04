@@ -11,6 +11,7 @@
 import os
 import pytest
 
+#from aiida import orm
 from aiida.engine.daemon import execmanager
 from aiida.transports.plugins.local import LocalTransport
 
@@ -54,3 +55,34 @@ def test_retrieve_files_from_list(tmp_path_factory, generate_calculation_node):
 
     with open(str(target / 'file_a.txt'), 'rb') as handle:
         assert handle.read() == content_a
+
+
+#@pytest.mark.usefixtures('clear_database_before_test')
+#def test_upload_calculation(tmp_path_factory, generate_calc_job, aiida_localhost):
+#    """Test the `upload_calculation` method."""
+#    from aiida.common.folders import Folder
+#    from aiida.common.datastructures import CalcInfo, CodeInfo
+#
+#    code_node = orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash')).store()
+#    source = tmp_path_factory.mktemp('source')
+#    target = tmp_path_factory.mktemp('target')
+#    localf = tmp_path_factory.mktemp('localf')
+#
+#    metadata = {'options': {'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1}}}
+#
+#    calc_node = generate_calc_job(
+#       folder=localf,
+#       entry_point_name='templatereplacer',
+#       inputs={'metadata': metadata, 'code': code_node}
+#    )
+#    calc_node.computer = aiida_localhost
+#    code_info = CodeInfo()
+#    code_info.code_uuid = code_node.uuid
+#    calc_info = CalcInfo()
+#    calc_info.uuid = str(code_node.uuid)
+#    calc_info.codes_info = [code_info]
+#    local_folder = Folder(abspath=str(source))
+#
+#    with LocalTransport() as transport:
+#        transport.chdir(str(target))
+#        execmanager.upload_calculation(node=calc_node, transport=transport, calc_info=calc_info, folder=local_folder)

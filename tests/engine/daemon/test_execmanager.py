@@ -17,6 +17,7 @@ from aiida import orm
 from aiida.engine.daemon import execmanager
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.transports.plugins.local import LocalTransport
+#from aiida.transports.plugins.ssh import SshTransport
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -163,3 +164,91 @@ def test_upload_calculation(aiida_localhost, aiida_local_code_factory, fixture_s
     full_file_path = str(calc_folder_path / 'symlink_file/file_3.sym')
     with open(full_file_path, 'r') as handle:
         assert handle.read() == 'dummy_content_3'
+
+
+def test_upload_folders(aiida_localhost, aiida_local_code_factory, fixture_sandbox, tmp_path):
+    """Test folders in the copy lists."""
+
+    # FolderData: needs to be stored when is checked by upload_calculation
+    folder_node = orm.FolderData()
+    folder_node.put_object_from_filelike(io.StringIO('dummy_content'), 'subfolder/file.txt')
+    folder_node.store()
+
+    # RemoteData: upload_calculation will not check if it is stored (should it?)
+    remote_node = orm.RemoteData(computer=aiida_localhost, remote_path=str(tmp_path))
+
+    remote_path_dir = tmp_path / 'subfolder'
+    remote_path_dir.mkdir()
+    remote_path = str(tmp_path / 'subfolder' / 'file.txt')
+    with open(remote_path, 'w') as handle:
+        handle.write('dummy_content')
+        handle.flush()
+
+    # All of these should work correctly?...
+    general_copy_list = []
+    #general_copy_list.append( ('subfolder', 'subfolder') )
+    #general_copy_list.append( ('subfolder/', 'subfolder') )
+    #general_copy_list.append( ('subfolder/*', 'subfolder') )
+    #general_copy_list.append( ('./subfolder', 'subfolder') )
+
+    # UNCOMMENT THIS
+    #general_copy_list.append( ('./subfolder/', './subfolder/') )
+    general_copy_list.append(('./subfolder/*', './subfolder/'))
+    copy_list_range = ['local', 'remote', 'symlink']
+    copy_list_range = ['remote']
+
+    folder_uuid = folder_node.uuid
+    remote_uuid = remote_node.computer.uuid
+    for copy_src0, copy_tgt in general_copy_list:
+        for copy_list in copy_list_range:
+
+            # CodeInfo and CalcInfo: need to be set up as normal for any CalcJob, but we also
+            # need to manually set calc_info.uuid  as we are skipping the step of the engine
+            # were this happens.
+            code_node = aiida_local_code_factory('arithmetic.add', '/bin/bash')
+            code_info = CodeInfo()
+            code_info.code_uuid = code_node.uuid
+            calc_node = orm.CalcJobNode(computer=aiida_localhost).store()
+            calc_info = CalcInfo()
+            calc_info.uuid = calc_node.uuid
+            calc_info.codes_info = [code_info]
+
+            copy_full = os.path.join(remote_node.get_remote_path(), copy_src0)
+            if copy_list == 'local':
+                calc_info.local_copy_list = [(folder_uuid, copy_src0, copy_tgt)]
+            if copy_list == 'remote':
+                calc_info.remote_copy_list = [(remote_uuid, copy_full, copy_tgt)]
+            if copy_list == 'symlink':
+                calc_info.remote_symlink_list = [(remote_uuid, copy_full, copy_tgt)]
+
+            # We need to manually open a transport and pass it to upload_calculation, together
+            # with a pre-set up sandbox folder (in this case it can be empty since we are mostly
+            # checking through the copy lists)
+
+            with LocalTransport() as transport:
+                execmanager.upload_calculation(calc_node, transport, calc_info, fixture_sandbox)
+
+            # dictin = {
+            #     'machine': ''localhost',
+            #     'timeout': 30,
+            #     'use_login_shell': False,
+            #     'key_policy': 'AutoAddPolicy',
+            # }
+            #with SshTransport(**dictin) as transport:
+            #    execmanager.upload_calculation(calc_node, transport, calc_info, fixture_sandbox)
+
+            # Check the folder and file is there
+            calc_folder_path = pathlib.Path(calc_node.get_remote_workdir())
+
+            folder_list = calc_folder_path.iterdir()
+            folder_path = calc_folder_path / 'subfolder'
+            assert list(folder_list) == [folder_path]
+
+            file_list = (calc_folder_path / 'subfolder').iterdir()
+            file_path = calc_folder_path / 'subfolder' / 'file.txt'
+            assert list((calc_folder_path / 'subfolder').iterdir()) == [calc_folder_path / 'subfolder/file.txt']
+            assert list(file_list) == [file_path]
+
+            full_file_path = str(calc_folder_path / 'subfolder/file.txt')
+            with open(full_file_path, 'r') as handle:
+                assert handle.read() == 'dummy_content'

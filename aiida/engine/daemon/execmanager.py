@@ -159,6 +159,16 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     remote_symlink_list = calc_info.remote_symlink_list or []
     provenance_exclude_list = calc_info.provenance_exclude_list or []
 
+    # First creates the directory structure locally before copying the sandbox folder, so that all the intermediate
+    # folders for the files in the copy_lists are there before calling the copy methods of the transport (or else
+    # these will fail).
+    # Alternatively, one would have to call the path creation methods of the transports just before calling the
+    # copy methods to make sure each path is there, unnecessarily duplicating the number of connections requested.
+    for _, _, target_relpath in local_copy_list + remote_copy_list + remote_symlink_list:
+        dirname = os.path.dirname(target_relpath)
+        if dirname:
+            os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
+
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
